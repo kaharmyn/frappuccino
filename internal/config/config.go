@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	_ "github.com/lib/pq"
 )
 
 type Config struct {

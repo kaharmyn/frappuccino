@@ -2,22 +2,7 @@ package repositories
 
 import "hot-coffee/models"
 
-type InventoryRepository interface {
-	ReadInventory() ([]models.InventoryItem, error)
-	WriteInventory([]models.InventoryItem) error
-}
-
-type MenuRepository interface {
-	ReadMenu() ([]models.MenuItem, error)
-	WriteMenu([]models.MenuItem) error
-}
-
 type OrderRepository interface {
-	ReadOrder() ([]models.Order, error)
-	WriteOrder([]models.Order) error
-}
-
-type OrderRepo interface {
 	CreateOrder(order models.Order) error
 	GetOrders() ([]models.Order, error)
 	GetOrderById(id string) (models.Order, error)
@@ -26,7 +11,7 @@ type OrderRepo interface {
 	CloseOrder(id string) error
 }
 
-type MenuRepo interface {
+type MenuRepository interface {
 	CreateMenuItem(item models.MenuItem) error
 	GetMenuList() ([]models.MenuItem, error)
 	GetMenuById(id string) (models.MenuItem, error)
@@ -34,7 +19,7 @@ type MenuRepo interface {
 	DeleteMenuItem(id string) error
 }
 
-type InventoryRepo interface {
+type InventoryRepository interface {
 	CreateInventoryItem(item models.InventoryItem) error
 	GetInventory() ([]models.InventoryItem, error)
 	GetInventoryByID(id string) (models.InventoryItem, error)

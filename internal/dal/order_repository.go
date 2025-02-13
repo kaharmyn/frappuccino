@@ -5,15 +5,13 @@ import (
 	"hot-coffee/models"
 
 	repositories "hot-coffee/internal/dal/utils"
-
-	_ "github.com/lib/pq"
 )
 
 type orderRepo struct {
 	DB *sql.DB
 }
 
-func NewOrderRepository(db *sql.DB) repositories.OrderRepo {
+func NewOrderRepository(db *sql.DB) repositories.OrderRepository {
 	return &orderRepo{DB: db}
 }
 

@@ -11,7 +11,7 @@ type menuRepo struct {
 	DB *sql.DB
 }
 
-func NewMenuRepository(db *sql.DB) repositories.MenuRepo {
+func NewMenuRepository(db *sql.DB) repositories.MenuRepository {
 	return &menuRepo{DB: db}
 } // asasas
 
