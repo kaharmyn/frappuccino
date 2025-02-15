@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hot-coffee/internal/dal/utils"
 	"hot-coffee/internal/service"
 	"hot-coffee/models"
 	"log/slog"
@@ -11,7 +12,10 @@ import (
 	"strconv"
 )
 
-var InventoryService = service.NewInventoryService()
+var (
+	repo             utils.InventoryRepository
+	InventoryService = service.NewInventoryService(repo)
+)
 
 func InventoryEndpoints(mux *http.ServeMux) {
 	mux.HandleFunc("POST /inventory", PostInventoryHandler)

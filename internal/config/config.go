@@ -3,47 +3,40 @@ package config
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
 
-func getDBConfig() (string, error) {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-
-	if host == "" || port == "" || user == "" || password == "" || dbname == "" {
-		return "", fmt.Errorf("missing required database environment variables")
-	}
-
-	// PostgreSQL DSN format
+func InitDB() (*sql.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname,
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
 	)
-	return dsn, nil
-}
 
-func InitDB() (*sql.DB, error) {
-	dsn, err := getDBConfig()
-	if err != nil {
-		return nil, err
+	var db *sql.DB
+	var err error
+
+	// Retry logic: Try for 10 seconds
+	for i := 0; i < 10; i++ {
+		db, err = sql.Open("postgres", dsn)
+		if err == nil {
+			err = db.Ping()
+		}
+		if err == nil {
+			fmt.Println("Database connected successfully!")
+			return db, nil
+		}
+
+		log.Println("Database connection failed, retrying in 2s...")
+		time.Sleep(2 * time.Second)
 	}
 
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure the database is reachable
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	fmt.Println("Connected to PostgreSQL successfully!")
-	return db, nil
+	return nil, fmt.Errorf("database connection failed after 10 retries: %w", err)
 }

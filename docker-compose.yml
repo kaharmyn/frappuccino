@@ -21,4 +21,4 @@ services:
       - POSTGRES_PASSWORD=latte
       - POSTGRES_DB=frappuccino
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/db/init.sql
