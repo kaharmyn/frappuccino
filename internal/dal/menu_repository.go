@@ -17,21 +17,129 @@ func NewMenuRepository(db *sql.DB) repositories.MenuRepository {
 
 // repo *menuRepo
 func (repo *menuRepo) CreateMenuItem(item models.MenuItem) error {
-	panic("not implemented") // TODO: Implement
+	query := `
+	INSERT INTO menu_items (name, description, price)
+	VALUES ($1, $2, $3)
+	RETURNING id
+`
+	var id int
+	err := repo.DB.QueryRow(query, item.Name, item.Description, item.Price).Scan(&id)
+	if err != nil {
+		return err
+	}
+
+	// Insert ingredients
+	for _, ingredient := range item.Ingredients {
+		query := `
+		INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity)
+		VALUES ($1, $2, $3)
+	`
+		_, err := repo.DB.Exec(query, id, ingredient.IngredientID, ingredient.Quantity)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (repo *menuRepo) GetMenuList() ([]models.MenuItem, error) {
-	panic("not implemented") // TODO: Implement
+func (repo *menuRepo) GetMenuList() ([]models.MenuItemResponse, error) {
+	query := `
+	SELECT id, name, description, price, categories, created_at
+	FROM menu_items
+`
+	rows, err := repo.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.MenuItemResponse
+	for rows.Next() {
+		var item models.MenuItemResponse
+		err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Price, &item.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }
 
-func (repo *menuRepo) GetMenuById(id string) (models.MenuItem, error) {
-	panic("not implemented") // TODO: Implement
+func (repo *menuRepo) GetMenuById(id string) (models.MenuItemResponse, error) {
+	query := `
+		SELECT id, name, description, price, created_at
+		FROM menu_items
+		WHERE id = $1
+	`
+	var item models.MenuItemResponse
+	err := repo.DB.QueryRow(query, id).Scan(&item.ID, &item.Name, &item.Description, &item.Price, &item.CreatedAt)
+	if err != nil {
+		return item, err
+	}
+
+	// Get ingredients
+	query = `
+		SELECT ingredient_id, quantity
+		FROM menu_item_ingredients
+		WHERE menu_item_id = $1
+	`
+	rows, err := repo.DB.Query(query, id)
+	if err != nil {
+		return item, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ingredient models.MenuItemIngredient
+		err := rows.Scan(&ingredient.IngredientID, &ingredient.Quantity)
+		if err != nil {
+			return item, err
+		}
+		item.Ingredients = append(item.Ingredients, ingredient)
+	}
+	return item, nil
 }
 
 func (repo *menuRepo) UpdateMenuItem(id string, data models.MenuItem) error {
-	panic("not implemented") // TODO: Implement
+	query := `
+		UPDATE menu_items
+		SET name = $1, description = $2, price = $3
+		WHERE id = $4
+	`
+	_, err := repo.DB.Exec(query, data.Name, data.Description, data.Price, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete existing ingredients
+	query = `
+		DELETE FROM menu_item_ingredients
+		WHERE menu_item_id = $1
+	`
+	_, err = repo.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	// Insert new ingredients
+	for _, ingredient := range data.Ingredients {
+		query := `
+			INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity)
+			VALUES ($1, $2, $3)
+		`
+		_, err := repo.DB.Exec(query, id, ingredient.IngredientID, ingredient.Quantity)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (repo *menuRepo) DeleteMenuItem(id string) error {
-	panic("not implemented") // TODO: Implement
+	query := `
+	DELETE FROM menu_items
+	WHERE id = $1
+`
+	_, err := repo.DB.Exec(query, id)
+	return err
 }

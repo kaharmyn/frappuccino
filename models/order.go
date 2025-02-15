@@ -3,14 +3,14 @@ package models
 type Order struct {
 	ID           int         `json:"order_id"`
 	CustomerName string      `json:"customer_name"`
-	Items        []OrderItem `json:"items"`
 	Status       string      `json:"status"`
+	Price        float64     `json:"price"`
 	CreatedAt    string      `json:"created_at"`
+	Items        []OrderItem `json:"items"`
 }
 
 type OrderItem struct {
-	ProductID string `json:"product_id"`
-	Quantity  int    `json:"quantity"`
+	MenuItemID   string  `json:"menu_item_id"`
+	Quantity     int     `json:"quantity"`
+	PriceAtOrder float64 `json:"price_at_order"`
 }
-
-// set total_price

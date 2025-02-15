@@ -8,14 +8,13 @@ import (
 	"net/http"
 )
 
-func init() {
-	if err := config.ConfigLoad(); err != nil {
-		log.Fatal(err)
-	}
-}
-
 func main() {
-	port := config.GetConfigPort()
+	db, err := config.InitDB()
+	if err != nil {
+		log.Fatal("Database connection failed:", err)
+	}
+	defer db.Close()
+
 	mux := http.NewServeMux()
 
 	handler.InventoryEndpoints(mux)
