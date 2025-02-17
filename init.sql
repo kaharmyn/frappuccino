@@ -81,8 +81,84 @@ CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 
 -- Insert mock data
 -- Menu items
+-- Insert inventory items
+INSERT INTO inventory (name, quantity, unit)
+VALUES
+    ('Espresso Beans', 5000, 'g'),
+    ('Milk', 20000, 'ml'),
+    ('Blueberries', 3000, 'g'),
+    ('Flour', 10000, 'g'),
+    ('Sugar', 5000, 'g'),
+    ('Butter', 3000, 'g'),
+    ('Eggs', 200, 'pieces'),
+    ('Paper Cups', 500, 'pieces'),
+    ('Chocolate Syrup', 1000, 'ml');
+
+-- Insert inventory transactions
+INSERT INTO inventory_transactions (ingredient_id, quantity, transaction_type)
+VALUES
+    (1, 1000, 'add'),
+    (2, 5000, 'add'),
+    (3, 1000, 'add'),
+    (4, 2000, 'add'),
+    (5, 1000, 'add'),
+    (6, 500, 'add'),
+    (7, 50, 'add'),
+    (8, 100, 'add');
+
+-- Insert additional menu items
 INSERT INTO menu_items (name, description, price, categories)
 VALUES
-    ('Caffe Latte', 'Espresso with steamed milk', 3.50, ARRAY['coffee', 'hot']),
-    ('Blueberry Muffin', 'Freshly baked muffin with blueberries', 2.00, ARRAY['bakery', 'snack']),
-   
+    ('Cappuccino', 'Espresso with steamed milk and foam', 3.75, ARRAY['coffee', 'hot']),
+    ('Iced Coffee', 'Cold brewed coffee with ice', 2.50, ARRAY['coffee', 'cold']),
+    ('Chocolate Croissant', 'Flaky croissant with chocolate filling', 3.00, ARRAY['bakery', 'snack']),
+    ('Americano', 'Espresso with hot water', 2.75, ARRAY['coffee', 'hot']);
+
+-- Insert menu item ingredients
+INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity)
+VALUES
+    (1, 1, 18),  -- Caffe Latte: 18g Espresso Beans
+    (1, 2, 150), -- Caffe Latte: 150ml Milk
+    (2, 3, 50),  -- Blueberry Muffin: 50g Blueberries
+    (2, 4, 100), -- Blueberry Muffin: 100g Flour
+    (2, 5, 50),  -- Blueberry Muffin: 50g Sugar
+    (2, 6, 30),  -- Blueberry Muffin: 30g Butter
+    (2, 7, 1),   -- Blueberry Muffin: 1 Egg
+    (3, 1, 18),  -- Cappuccino: 18g Espresso Beans
+    (3, 2, 120), -- Cappuccino: 120ml Milk
+    (4, 1, 18),  -- Iced Coffee: 18g Espresso Beans
+    (4, 2, 200), -- Iced Coffee: 200ml Milk
+
+-- Insert sample orders
+INSERT INTO orders (customer_name, status, price)
+VALUES
+    ('John Doe', 'open', 7.50),
+    ('Jane Smith', 'closed', 5.50),
+    ('Alice Brown', 'cancelled', 3.75);
+
+-- Insert order items
+INSERT INTO order_items (order_id, menu_item_id, quantity, price_at_order)
+VALUES
+    (1, 1, 1, 3.50), -- John Doe ordered 1 Caffe Latte
+    (1, 2, 2, 4.00), -- John Doe ordered 2 Blueberry Muffins
+    (2, 3, 1, 3.75), -- Jane Smith ordered 1 Cappuccino
+    (2, 5, 1, 3.00), -- Jane Smith ordered 1 Chocolate Croissant
+    (3, 4, 1, 2.75); -- Alice Brown ordered 1 Americano
+
+-- Insert order status history
+INSERT INTO order_status_history (order_id, status)
+VALUES
+    (1, 'open'),
+    (2, 'open'),
+    (2, 'closed'),
+    (3, 'open'),
+    (3, 'cancelled');
+
+-- Insert price history for menu items
+INSERT INTO price_history (menu_item_id, price)
+VALUES
+    (1, 3.50),
+    (2, 2.00),
+    (3, 3.75),
+    (4, 2.50),
+    (5, 3.00);

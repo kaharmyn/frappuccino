@@ -16,9 +16,11 @@ services:
 
   db:
     image: postgres:15
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_USER=latte
       - POSTGRES_PASSWORD=latte
       - POSTGRES_DB=frappuccino
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/db/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql

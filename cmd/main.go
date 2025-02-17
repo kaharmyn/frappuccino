@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"hot-coffee/internal/config"
+	"hot-coffee/internal/dal"
 	"hot-coffee/internal/handler"
+	"hot-coffee/internal/service"
 	"log"
 	"net/http"
 )
@@ -17,7 +19,11 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	handler.InventoryEndpoints(mux)
+	invRepo := dal.NewInventoryRepository(db)
+	service := service.NewInventoryService(invRepo)
+	invHandler := handler.NewInventoryHandler(service)
+
+	handler.InventoryEndpoints(mux, invHandler)
 	// handler.MenuEndpoints(mux)
 	// handler.OrderEndpoints(mux)
 	// handler.AggregationEndpoints(mux)
