@@ -13,7 +13,6 @@ services:
       - DB_PORT=5432
     depends_on:
       - db
-
   db:
     image: postgres:15
     ports:

@@ -56,7 +56,7 @@ func (repo *orderRepo) CreateOrder(order models.Order) error {
 
 func (repo *orderRepo) GetOrders() ([]models.Order, error) {
 	query := `
-        SELECT id, customer_name, status, price, created_at
+        SELECT id, customer_name, status, total_price, created_at
         FROM orders
     `
 	rows, err := repo.DB.Query(query)
@@ -75,7 +75,7 @@ func (repo *orderRepo) GetOrders() ([]models.Order, error) {
 
 		// Get order items
 		itemQuery := `
-            SELECT menu_item_id, quantity, price_at_order
+            SELECT menu_item_id, quantity, unit_price_at_order
             FROM order_items
             WHERE order_id = $1
         `
