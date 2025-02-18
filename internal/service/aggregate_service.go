@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"hot-coffee/internal/dal/utils"
 	"hot-coffee/models"
 )
 
@@ -10,15 +11,29 @@ var (
 	ErrUnsupportedContentType = errors.New("unsupported content type")
 )
 
-func GetTotalSales() (models.TotalSales, error) {
+type Aggregate struct {
+	repo utils.AggregateRepository
+}
+
+type AggregationService interface {
+	GetTotalSales() (models.TotalSales, error)
+	GetPopularItems() ([]models.PopularItem, error)
+	GetTopItemsByQuantity(productQuantities map[string]int, topN int) []models.PopularItem
+}
+
+func NewAggregateService(repo utils.AggregateRepository) AggregationService {
+	return &Aggregate{repo: repo}
+}
+
+func (a *Aggregate) GetTotalSales() (models.TotalSales, error) {
 	panic("implement")
 }
 
-func GetPopularItems() ([]models.PopularItem, error) {
+func (a *Aggregate) GetPopularItems() ([]models.PopularItem, error) {
 	panic("implement")
 }
 
 // Helper function to get top N items by quantity
-func GetTopItemsByQuantity(productQuantities map[string]int, topN int) []models.PopularItem {
+func (a *Aggregate) GetTopItemsByQuantity(productQuantities map[string]int, topN int) []models.PopularItem {
 	panic("implement")
 }

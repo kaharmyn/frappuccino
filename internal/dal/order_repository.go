@@ -16,7 +16,6 @@ func NewOrderRepository(db *sql.DB) repositories.OrderRepository {
 }
 
 // repo *orderRepo
-
 func (repo *orderRepo) CreateOrder(order models.Order) error {
 	// Start a transaction
 	tx, err := repo.DB.Begin()
@@ -134,13 +133,13 @@ func (repo *orderRepo) GetOrderById(id int) (models.Order, error) {
 	return order, nil
 }
 
-func (repo *orderRepo) UpdateOrder(id int, data models.Order) error {
+func (repo *orderRepo) UpdateOrder(order models.Order) error {
 	query := `
         UPDATE orders
         SET customer_name = $1, status = $2, price = $3
         WHERE id = $4
     `
-	_, err := repo.DB.Exec(query, data.CustomerName, data.Status, data.Price, id)
+	_, err := repo.DB.Exec(query, order.CustomerName, order.Status, order.Price, order.ID)
 	return err
 }
 

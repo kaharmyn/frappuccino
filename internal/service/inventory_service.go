@@ -11,8 +11,8 @@ type Inventory struct {
 }
 
 type InventoryService interface {
-	GetAllInventory() ([]models.InventoryItemResponse, error)
-	GetInventoryByID(id string) (models.InventoryItemResponse, error)
+	GetAllInventory() ([]models.InventoryItem, error)
+	GetInventoryByID(id string) (models.InventoryItem, error)
 	AddNewInventoryItem(item models.InventoryItem) error
 	DeleteInventoryItem(id string) error
 	ModifyInventoryItem(item models.InventoryItem) error
@@ -25,7 +25,7 @@ func NewInventoryService(repo utils.InventoryRepository) InventoryService {
 
 // InventoryService
 
-func (i *Inventory) GetAllInventory() ([]models.InventoryItemResponse, error) {
+func (i *Inventory) GetAllInventory() ([]models.InventoryItem, error) {
 	if i == nil {
 		return nil, fmt.Errorf("not initialized")
 	}
@@ -33,7 +33,7 @@ func (i *Inventory) GetAllInventory() ([]models.InventoryItemResponse, error) {
 	return i.repo.GetInventory()
 }
 
-func (i *Inventory) GetInventoryByID(id string) (models.InventoryItemResponse, error) {
+func (i *Inventory) GetInventoryByID(id string) (models.InventoryItem, error) {
 	return i.repo.GetInventoryByID(id)
 }
 

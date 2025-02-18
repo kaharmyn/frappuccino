@@ -42,9 +42,10 @@ func (repo *menuRepo) CreateMenuItem(item models.MenuItem) error {
 	return nil
 }
 
-func (repo *menuRepo) GetMenuList() ([]models.MenuItemResponse, error) {
+func (repo *menuRepo) GetMenuList() ([]models.MenuItem, error) {
+	// SELECT id, name, description, price, categories, created_at
 	query := `
-	SELECT id, name, description, price, categories, created_at
+	SELECT id, name, description, price
 	FROM menu_items
 `
 	rows, err := repo.DB.Query(query)
@@ -53,10 +54,10 @@ func (repo *menuRepo) GetMenuList() ([]models.MenuItemResponse, error) {
 	}
 	defer rows.Close()
 
-	var items []models.MenuItemResponse
+	var items []models.MenuItem
 	for rows.Next() {
-		var item models.MenuItemResponse
-		err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Price, &item.CreatedAt)
+		var item models.MenuItem
+		err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.Price)
 		if err != nil {
 			return nil, err
 		}
@@ -65,14 +66,15 @@ func (repo *menuRepo) GetMenuList() ([]models.MenuItemResponse, error) {
 	return items, nil
 }
 
-func (repo *menuRepo) GetMenuById(id string) (models.MenuItemResponse, error) {
+func (repo *menuRepo) GetMenuById(id string) (models.MenuItem, error) {
+	// SELECT id, name, description, price, created_at
 	query := `
-		SELECT id, name, description, price, created_at
+		SELECT id, name, description, price
 		FROM menu_items
 		WHERE id = $1
 	`
-	var item models.MenuItemResponse
-	err := repo.DB.QueryRow(query, id).Scan(&item.ID, &item.Name, &item.Description, &item.Price, &item.CreatedAt)
+	var item models.MenuItem
+	err := repo.DB.QueryRow(query, id).Scan(&item.ID, &item.Name, &item.Description, &item.Price)
 	if err != nil {
 		return item, err
 	}
@@ -100,13 +102,13 @@ func (repo *menuRepo) GetMenuById(id string) (models.MenuItemResponse, error) {
 	return item, nil
 }
 
-func (repo *menuRepo) UpdateMenuItem(id string, data models.MenuItem) error {
+func (repo *menuRepo) UpdateMenuItem(item models.MenuItem) error {
 	query := `
 		UPDATE menu_items
 		SET name = $1, description = $2, price = $3
 		WHERE id = $4
 	`
-	_, err := repo.DB.Exec(query, data.Name, data.Description, data.Price, id)
+	_, err := repo.DB.Exec(query, item.Name, item.Description, item.Price, item.ID)
 	if err != nil {
 		return err
 	}
@@ -116,18 +118,18 @@ func (repo *menuRepo) UpdateMenuItem(id string, data models.MenuItem) error {
 		DELETE FROM menu_item_ingredients
 		WHERE menu_item_id = $1
 	`
-	_, err = repo.DB.Exec(query, id)
+	_, err = repo.DB.Exec(query, item.ID)
 	if err != nil {
 		return err
 	}
 
 	// Insert new ingredients
-	for _, ingredient := range data.Ingredients {
+	for _, ingredient := range item.Ingredients {
 		query := `
 			INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, quantity)
 			VALUES ($1, $2, $3)
 		`
-		_, err := repo.DB.Exec(query, id, ingredient.IngredientID, ingredient.Quantity)
+		_, err := repo.DB.Exec(query, item.ID, ingredient.IngredientID, ingredient.Quantity)
 		if err != nil {
 			return err
 		}

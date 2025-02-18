@@ -19,14 +19,22 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	invRepo := dal.NewInventoryRepository(db)
-	service := service.NewInventoryService(invRepo)
-	invHandler := handler.NewInventoryHandler(service)
+	inventoryRepo := dal.NewInventoryRepository(db)
+	inventoryService := service.NewInventoryService(inventoryRepo)
+	inventoryHandler := handler.NewInventoryHandler(inventoryService)
 
-	handler.InventoryEndpoints(mux, invHandler)
-	// handler.MenuEndpoints(mux)
-	// handler.OrderEndpoints(mux)
-	// handler.AggregationEndpoints(mux)
+	menuRepo := dal.NewMenuRepository(db)
+	menuService := service.NewMenuService(menuRepo)
+	menuHandler := handler.NewMenuHandler(menuService)
+
+	orderRepo := dal.NewOrderRepository(db)
+	orderService := service.NewOrderService(orderRepo)
+	orderHandler := handler.NewOrderHandler(orderService)
+
+	handler.InventoryEndpoints(mux, inventoryHandler)
+	handler.MenuEndpoints(mux, menuHandler)
+	handler.OrderEndpoints(mux, orderHandler)
+	// handler.AggregationEndpoints(mux, aggregateHandler)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handler.ErrorResponse(w, "405 - No such method", http.StatusMethodNotAllowed)

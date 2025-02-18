@@ -1,12 +1,12 @@
 package service
 
 import (
+	"hot-coffee/internal/dal/utils"
 	"hot-coffee/models"
 )
 
 type Order struct {
-	cacheOrders   []models.Order
-	takenIDOrders map[int]int
+	repo utils.OrderRepository
 }
 
 type OrderService interface {
@@ -15,43 +15,35 @@ type OrderService interface {
 	AddNewOrder(order models.Order) error
 	CloseOrder(ID int) error
 	DeleteOrder(ID int) error
-	ModifyOrder(order models.Order, ID int) error
-	LoadOrdersCache() error
+	ModifyOrder(order models.Order) error
 }
 
-func NewOrderService() OrderService {
-	return &Order{
-		cacheOrders:   []models.Order{},
-		takenIDOrders: make(map[int]int),
-	}
+func NewOrderService(repo utils.OrderRepository) OrderService {
+	return &Order{repo: repo}
 }
 
 // OrderService
 
 func (o *Order) GetAllOrders() ([]models.Order, error) {
-	panic("not implemented") // TODO: Implement
+	return o.repo.GetOrders()
 }
 
 func (o *Order) GetOrderByID(ID int) (models.Order, error) {
-	panic("not implemented") // TODO: Implement
+	return o.repo.GetOrderById(ID)
 }
 
 func (o *Order) AddNewOrder(order models.Order) error {
-	panic("not implemented") // TODO: Implement
+	return o.repo.CreateOrder(order)
 }
 
 func (o *Order) CloseOrder(ID int) error {
-	panic("not implemented") // TODO: Implement
+	return o.repo.CloseOrder(ID)
 }
 
 func (o *Order) DeleteOrder(ID int) error {
-	panic("not implemented") // TODO: Implement
+	return o.repo.DeleteOrder(ID)
 }
 
-func (o *Order) ModifyOrder(order models.Order, ID int) error {
-	panic("not implemented") // TODO: Implement
-}
-
-func (o *Order) LoadOrdersCache() error {
-	panic("not implemented") // TODO: Implement
+func (o *Order) ModifyOrder(order models.Order) error {
+	return o.repo.UpdateOrder(order)
 }

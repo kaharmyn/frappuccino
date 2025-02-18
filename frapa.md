@@ -1,5 +1,52 @@
 # frappuccino
 
+**Data Models**
+
+Define data models for each entity, ensuring they are serializable to JSON and include all necessary fields.
+
+- **Order (`models/order.go`):** 
+
+```go
+type Order struct {
+    ID           string       `json:"order_id"`
+    CustomerName string       `json:"customer_name"`
+    Items        []OrderItem  `json:"items"`
+    Status       string       `json:"status"`
+    CreatedAt    string       `json:"created_at"`
+}
+
+type OrderItem struct {
+    ProductID string `json:"product_id"`
+    Quantity  int    `json:"quantity"`
+}
+```
+
+- **Menu Item (`models/menu_item.go`):**
+```go
+type MenuItem struct {
+  ID          string                `json:"product_id"`
+  Name        string                `json:"name"`
+  Description string                `json:"description"`
+  Price       float64               `json:"price"`
+  Ingredients []MenuItemIngredient  `json:"ingredients"`
+}
+
+type MenuItemIngredient struct {
+  IngredientID string `json:"ingredient_id"`
+  Quantity     float64    `json:"quantity"`
+}
+```
+
+- **Inventory Item (`models/inventory_item.go`):**
+```go
+type InventoryItem struct {
+    IngredientID string `json:"ingredient_id"`
+    Name         string `json:"name"`
+    Quantity     float64    `json:"quantity"`
+    Unit         string `json:"unit"`
+}
+```
+
 ## Learning Objectives
 
 - SQL
@@ -21,25 +68,11 @@ Fortunately, since the project was initially built using a layered architecture,
 
 As part of this project, you must design tables correctly and define relationships between them appropriately.
 
-## General Criteria
-
-- Your code MUST be written in accordance with [gofumpt](https://github.com/mvdan/gofumpt). If not, you will be graded `0` automatically.
-- Your program MUST be able to compile successfully.
-- Your program MUST not exit unexpectedly (any panics: `nil-pointer dereference`, `index out of range` etc.). If so, you will get `0` during the defence.
-- Only built-in packages are allowed, except for the PostgreSQL driver. Using any other external packages will result in a grade of 0.
-- The project MUST be run by the following command in the project's root directory:
-
-```shell
-$ docker compose up
-```
 
 ## Mandatory Part
 
 ### ERD (Entity-Relationship Diagram) Requirements
 
-Before implementing PostgreSQL database, you must design your [ERD](https://www.lucidchart.com/pages/er-diagrams). The diagram should be based on the original hot-coffee data models but enhanced with proper database relationships.
-
-Your database schema **must** utilize the following specific data types. Here are some hints about where they might be useful, but the final implementation is up to you:
 
 #### JSONB
 Areas of implementation:
@@ -124,31 +157,15 @@ Areas of implementation:
 
 Your task is to rewrite the existing endpoints in the **hot-coffee** project to work with a PostgreSQL database. To do this, you may use a third-party PostgreSQL driver as part of your solution.
 
-### Containerization Guide
-
-Since adding a database dependency to your project makes it more challenging for auditor to run and test it, you need to containerize your service and database into separate containers.
-Don't worry about it, everything made up for you. Just use ready `Dockerfile` and `docker-compose.yml` files provided for you [here](https://github.com/alem-platform/backend/tree/main/frappuccino). Place everything in the root folder of the project and then follow the instructions:
-
-1. Docker compose file requires you to create `init.sql` that should be placed in the root folder of the project, near previously downloaded files. It should contain all `SQL` code for creating necessary tables and relations
-2. Adjust the `Dockerfile` provided to run your application - edit `CMD` command accordingly 
-3. This will allow the project to be started with a single command:
-```bash
-docker compose up
-```
-
-#### Important Notes
-
-- Your API will be available at *localhost:8080*
-- Use these database connection settings in your code:
-    - **Host**: db
-    - **Port**: 5432
-    - **User**: latte
-    - **Password**: latte
-    - **Database**: frappuccino
-
 - The init.sql file will automatically create your tables when the container starts
 
-### New Endpoints
+### API Endpoints
+
+#### JSON response from the server:
+
+- Orders: Information about customer orders.
+- Menu Items: Details about the products available in the coffee shop.
+- Inventory Items: Inventory of ingredients required to prepare menu items.
 
 As part of the task, the following endpoints must be rewritten to work using SQL queries:
 
@@ -178,6 +195,48 @@ As part of the task, the following endpoints must be rewritten to work using SQL
 
     - `GET /reports/total-sales`: Get the total sales amount.
     - `GET /reports/popular-items`: Get a list of popular menu items.
+
+
+#### Updating Inventory Upon Order Fulfillment
+When an order is created and processed, the application must:
+
+- Check Inventory Levels:
+  - Before confirming an order, verify that there are sufficient quantities of all required ingredients in `inventory.json`.
+  - If any ingredient is insufficient, the order should not be processed, and an appropriate error message should be returned.
+- Deduct Ingredients:
+  - Upon successful processing of an order, deduct the required quantities of each ingredient from `inventory.json`.
+
+**Examples:**
+
+- **Create Order Request:**
+```http 
+POST /orders
+Content-Type: application/json
+
+{
+  "customer_name": "John Doe",
+  "items": [
+    {
+      "product_id": "espresso",
+      "quantity": 2
+    },
+    {
+      "product_id": "croissant",
+      "quantity": 1
+    }
+  ]
+}
+```
+
+- **Total Sales Aggregation Response:**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "total_sales": 1500.50
+}
+```
 
 In addition to rewriting the existing endpoints, you must also develop the following new ones:
 #### 1. Number of ordered items
@@ -495,21 +554,3 @@ Important:
 - Mock data must be consistent (e.g., orders reference existing menu items)
 - Initial data should be realistic for a coffee shop context
 
-## Guidelines from Author
-
-In the initial stages of working with tables and relationships, it can be challenging to understand and organize everything. 
-
-Therefore, you may use visualising tools like **pgAdmin** for actually *seeing* what you're doing.
-
-Also, start with ERD and make it as detailed as you can, it would really help you to connect all the dots.
-
-## Author
-
-This project has been created by:
-
-Askaruly Nurislam, alumni of Alem School
-
-Contacts:
-
-- Email: [askaruly@hotmail.com](mailto:askaruly@hotmail.com)
-- [GitHub](https://github.com/darwin939/)

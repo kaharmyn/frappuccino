@@ -26,9 +26,9 @@ func (repo *inventoryRepo) CreateInventoryItem(item models.InventoryItem) error 
 	return err
 }
 
-func (repo *inventoryRepo) GetInventory() ([]models.InventoryItemResponse, error) {
+func (repo *inventoryRepo) GetInventory() ([]models.InventoryItem, error) {
 	query := `
-		SELECT id, name, quantity, unit, created_at
+		SELECT id, name, quantity, unit
 		FROM inventory
 	`
 	rows, err := repo.DB.Query(query)
@@ -37,10 +37,10 @@ func (repo *inventoryRepo) GetInventory() ([]models.InventoryItemResponse, error
 	}
 	defer rows.Close()
 
-	var items []models.InventoryItemResponse
+	var items []models.InventoryItem
 	for rows.Next() {
-		var item models.InventoryItemResponse
-		err := rows.Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit, &item.CreatedAt)
+		var item models.InventoryItem
+		err := rows.Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit)
 		if err != nil {
 			return nil, err
 		}
@@ -49,14 +49,14 @@ func (repo *inventoryRepo) GetInventory() ([]models.InventoryItemResponse, error
 	return items, nil
 }
 
-func (repo *inventoryRepo) GetInventoryByID(id string) (models.InventoryItemResponse, error) {
+func (repo *inventoryRepo) GetInventoryByID(id string) (models.InventoryItem, error) {
 	query := `
 		SELECT id, name, quantity, unit, created_at
 		FROM inventory
 		WHERE id = $1
 	`
-	var item models.InventoryItemResponse
-	err := repo.DB.QueryRow(query, id).Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit, &item.CreatedAt)
+	var item models.InventoryItem
+	err := repo.DB.QueryRow(query, id).Scan(&item.IngredientID, &item.Name, &item.Quantity, &item.Unit)
 	return item, err
 }
 

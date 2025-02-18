@@ -11,29 +11,35 @@ import (
 	"strconv"
 )
 
-var MenuService = service.NewMenuService()
-
-func MenuEndpoints(mux *http.ServeMux) {
-	mux.HandleFunc("POST /menu", PostMenuHandler)
-	mux.HandleFunc("POST /menu/", PostMenuHandler)
-
-	mux.HandleFunc("GET /menu", GetAllMenuHandler)
-	mux.HandleFunc("GET /menu/", GetAllMenuHandler)
-
-	mux.HandleFunc("GET /menu/{id}", GetMenuByIDHandler)
-	mux.HandleFunc("GET /menu/{id}/", GetMenuByIDHandler)
-
-	mux.HandleFunc("PUT /menu/{id}", PutMenuHandler)
-	mux.HandleFunc("PUT /menu/{id}/", PutMenuHandler)
-
-	mux.HandleFunc("DELETE /menu/{id}", DeleteMenuByIDHandler)
-	mux.HandleFunc("DELETE /menu/{id}/", DeleteMenuByIDHandler)
+type MenuHandler struct {
+	service service.MenuService
 }
 
-func GetAllMenuHandler(w http.ResponseWriter, r *http.Request) {
-	menu, err := MenuService.GetAllMenu()
+func NewMenuHandler(service service.MenuService) *MenuHandler {
+	return &MenuHandler{service: service}
+}
+
+func MenuEndpoints(mux *http.ServeMux, handler *MenuHandler) {
+	mux.HandleFunc("POST /menu", handler.PostMenuHandler)
+	mux.HandleFunc("POST /menu/", handler.PostMenuHandler)
+
+	mux.HandleFunc("GET /menu", handler.GetAllMenuHandler)
+	mux.HandleFunc("GET /menu/", handler.GetAllMenuHandler)
+
+	mux.HandleFunc("GET /menu/{id}", handler.GetMenuByIDHandler)
+	mux.HandleFunc("GET /menu/{id}/", handler.GetMenuByIDHandler)
+
+	mux.HandleFunc("PUT /menu/{id}", handler.PutMenuHandler)
+	mux.HandleFunc("PUT /menu/{id}/", handler.PutMenuHandler)
+
+	mux.HandleFunc("DELETE /menu/{id}", handler.DeleteMenuByIDHandler)
+	mux.HandleFunc("DELETE /menu/{id}/", handler.DeleteMenuByIDHandler)
+}
+
+func (h *MenuHandler) GetAllMenuHandler(w http.ResponseWriter, r *http.Request) {
+	menu, err := h.service.GetAllMenu()
 	if err != nil {
-		ErrorResponse(w, "Could not retrieve menu data", http.StatusInternalServerError)
+		ErrorResponse(w, "Could not retrieve menu data:"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -54,9 +60,9 @@ func GetAllMenuHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Retrieved all menu products")
 }
 
-func GetMenuByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *MenuHandler) GetMenuByIDHandler(w http.ResponseWriter, r *http.Request) {
 	itemId := r.PathValue("id")
-	item, err := MenuService.GetMenuByID(itemId)
+	item, err := h.service.GetMenuByID(itemId)
 	if errors.Is(err, service.ErrMenuNotRead) {
 		ErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,9 +88,9 @@ func GetMenuByIDHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Retrieved menu item", "ID", item.ID)
 }
 
-func DeleteMenuByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *MenuHandler) DeleteMenuByIDHandler(w http.ResponseWriter, r *http.Request) {
 	itemId := r.PathValue("id")
-	err := MenuService.DeleteMenuItem(itemId)
+	err := h.service.DeleteMenuItem(itemId)
 	if errors.Is(err, service.ErrMenuNotRead) {
 		ErrorResponse(w, err.Error(), http.StatusNotFound)
 		return
@@ -134,7 +140,7 @@ func parseMenuItem(r *http.Request) (models.MenuItem, error) {
 	return item, nil
 }
 
-func PostMenuHandler(w http.ResponseWriter, r *http.Request) {
+func (h *MenuHandler) PostMenuHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := parseMenuItem(r)
 	if errors.Is(err, ErrUnsupportedContentType) {
 		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
@@ -143,7 +149,7 @@ func PostMenuHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := MenuService.AddNewMenuItem(item); errors.Is(err, service.ErrConflict) {
+	if err := h.service.AddNewMenuItem(item); errors.Is(err, service.ErrConflict) {
 		ErrorResponse(w, err.Error(), http.StatusConflict)
 		return
 	} else if err != nil {
@@ -160,7 +166,7 @@ func PostMenuHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Created menu item", "ID", item.ID)
 }
 
-func PutMenuHandler(w http.ResponseWriter, r *http.Request) {
+func (h *MenuHandler) PutMenuHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := parseMenuItem(r)
 	if errors.Is(err, ErrUnsupportedContentType) {
 		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
@@ -176,7 +182,7 @@ func PutMenuHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := MenuService.ModifyMenuItem(item); errors.Is(err, service.ErrConflict) {
+	if err := h.service.ModifyMenuItem(item); errors.Is(err, service.ErrConflict) {
 		ErrorResponse(w, err.Error(), http.StatusConflict)
 		return
 	} else if err != nil {

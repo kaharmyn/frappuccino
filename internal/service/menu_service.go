@@ -1,16 +1,15 @@
 package service
 
 import (
+	"hot-coffee/internal/dal/utils"
 	"hot-coffee/models"
 )
 
 type Menu struct {
-	cacheMenu   []models.MenuItem
-	takenIDMenu map[string]int
+	repo utils.MenuRepository
 }
 
 type MenuService interface {
-	LoadMenuCache() error
 	GetAllMenu() ([]models.MenuItem, error)
 	GetMenuByID(id string) (models.MenuItem, error)
 	DeleteMenuItem(id string) error
@@ -19,37 +18,29 @@ type MenuService interface {
 	DeductMenuProduct(ID string, quantity float64) error
 }
 
-func NewMenuService() MenuService {
-	return &Menu{
-		cacheMenu:   []models.MenuItem{},
-		takenIDMenu: make(map[string]int),
-	}
+func NewMenuService(repo utils.MenuRepository) MenuService {
+	return &Menu{repo: repo}
 }
 
 // MenuService
-
-func (m *Menu) LoadMenuCache() error {
-	panic("not implemented") // TODO: Implement
-}
-
 func (m *Menu) GetAllMenu() ([]models.MenuItem, error) {
-	panic("not implemented") // TODO: Implement
+	return m.repo.GetMenuList()
 }
 
 func (m *Menu) GetMenuByID(id string) (models.MenuItem, error) {
-	panic("not implemented") // TODO: Implement
+	return m.repo.GetMenuById(id)
 }
 
 func (m *Menu) DeleteMenuItem(id string) error {
-	panic("not implemented") // TODO: Implement
+	return m.repo.DeleteMenuItem(id)
 }
 
 func (m *Menu) AddNewMenuItem(item models.MenuItem) error {
-	panic("not implemented") // TODO: Implement
+	return m.repo.CreateMenuItem(item)
 }
 
 func (m *Menu) ModifyMenuItem(item models.MenuItem) error {
-	panic("not implemented") // TODO: Implement
+	return m.repo.UpdateMenuItem(item)
 }
 
 func (m *Menu) DeductMenuProduct(ID string, quantity float64) error {

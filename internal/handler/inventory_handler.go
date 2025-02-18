@@ -102,37 +102,6 @@ func (h *InventoryHandler) DeleteInventoryByIDHandler(w http.ResponseWriter, r *
 	slog.Info("Deleted inventory item id", "ID", itemId)
 }
 
-func (h *InventoryHandler) parseInventoryItem(r *http.Request) (models.InventoryItem, error) {
-	var item models.InventoryItem
-	contentType := r.Header.Get("Content-Type")
-
-	if contentType == "application/json" {
-		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
-			return item, fmt.Errorf("invalid JSON payload")
-		}
-	} else if contentType == "application/x-www-form-urlencoded" {
-		if err := r.ParseForm(); err != nil {
-			return item, fmt.Errorf("invalid form data")
-		}
-
-		quantity, err := strconv.ParseFloat(r.FormValue("quantity"), 64)
-		if err != nil {
-			return item, fmt.Errorf("quantity is not a float")
-		}
-
-		item = models.InventoryItem{
-			IngredientID: r.FormValue("ingredient_id"),
-			Name:         r.FormValue("name"),
-			Quantity:     quantity,
-			Unit:         r.FormValue("unit"),
-		}
-	} else {
-		return item, fmt.Errorf("unsupported content type")
-	}
-
-	return item, nil
-}
-
 func (h *InventoryHandler) PostInventoryHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := parseInventoryItem(r)
 	if errors.Is(err, ErrUnsupportedContentType) {
