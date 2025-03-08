@@ -1,134 +1,42 @@
 package config
 
 import (
-	"errors"
-	"flag"
+	"database/sql"
 	"fmt"
+	"log"
 	"os"
-	"path/filepath"
-	"strings"
+	"time"
+
+	_ "github.com/lib/pq"
 )
 
-type Config struct {
-	Port        int
-	Directory   string
-	StoragePath string
-}
+func InitDB() (*sql.DB, error) {
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
 
-func ConfigLoad() error {
-	port := flag.Int("port", 8080, "port of srever")
-	directory := flag.String("dir", "data", "data directory")
-	help := flag.Bool("help", false, "help")
+	var db *sql.DB
+	var err error
 
-	flag.Parse()
-
-	if help != nil && *help {
-		printHelp()
-		os.Exit(0)
-	}
-
-	if err := validatePath(*directory); err != nil {
-		return err
-	}
-
-	storagePath, _ := filepath.Abs(*directory)
-
-	if *port < 1024 {
-		return errors.New("port couldn't be equal less than 1024")
-	}
-
-	cfg = Config{*port, *directory, storagePath}
-	return cfg.CreateStorage()
-}
-
-func GetStoragePath() string {
-	return cfg.StoragePath
-}
-
-func GetConfigPort() int {
-	return cfg.Port
-}
-
-var cfg Config
-
-func validatePath(path string) error {
-	c, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-	return isNotInProgramFiles(c)
-}
-
-func isNotInProgramFiles(path string) error {
-	cmdPath, _ := filepath.Abs("cmd")
-	internalPath, _ := filepath.Abs("internal")
-	modelsPath, _ := filepath.Abs("models")
-	if strings.HasPrefix(path, cmdPath) || strings.HasPrefix(path, internalPath) || strings.HasPrefix(path, modelsPath) {
-		return errors.New("path to storage directory is inside a program file")
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return fmt.Errorf("could not parse path for data directory")
-	}
-
-	if strings.Contains(path, "..") {
-		return fmt.Errorf("breaking code traversal")
-	}
-
-	if filepath.IsAbs(path) && strings.Contains(path, "..") {
-		return fmt.Errorf("relative paths or directory traversal is not allowed")
-	}
-
-	projectRootDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("could not start server on %s", projectRootDir)
-	}
-	if !strings.HasPrefix(absPath, projectRootDir) {
-		return fmt.Errorf("path is outside of the project directory")
-	}
-
-	if absPath == projectRootDir {
-		return fmt.Errorf("cannot create file directly inside the project root directory")
-	}
-
-	return nil
-}
-
-func printHelp() {
-	fmt.Println(`Coffee Shop Management System
-
-Usage:
-  hot-coffee [--port <N>] [--dir <S>] 
-  hot-coffee --help`)
-	fmt.Println("\nOptions:")
-	flag.PrintDefaults()
-}
-
-func (cfg Config) CreateStorage() error {
-	if _, err := os.Stat(cfg.StoragePath); os.IsNotExist(err) {
-		os.Mkdir(cfg.StoragePath, 0o777)
-	}
-	if _, err := os.Stat(filepath.Join(cfg.StoragePath, "orders.json")); os.IsNotExist(err) {
-		if file, err := os.Create(filepath.Join(cfg.StoragePath, "orders.json")); err != nil {
-			return err
-		} else {
-			defer file.Close()
+	// Retry logic: Try for 10 seconds
+	for i := 0; i < 10; i++ {
+		db, err = sql.Open("postgres", dsn)
+		if err == nil {
+			err = db.Ping()
 		}
-	}
-	if _, err := os.Stat(filepath.Join(cfg.StoragePath, "inventory.json")); os.IsNotExist(err) {
-		if file, err := os.Create(filepath.Join(cfg.StoragePath, "inventory.json")); err != nil {
-			return err
-		} else {
-			defer file.Close()
+		if err == nil {
+			fmt.Println("Database connected successfully!")
+			return db, nil
 		}
+
+		log.Println("Database connection failed, retrying in 2s...")
+		time.Sleep(2 * time.Second)
 	}
-	if _, err := os.Stat(filepath.Join(cfg.StoragePath, "menu_items.json")); os.IsNotExist(err) {
-		if file, err := os.Create(filepath.Join(cfg.StoragePath, "menu_items.json")); err != nil {
-			return err
-		} else {
-			defer file.Close()
-		}
-	}
-	return nil
+
+	return nil, fmt.Errorf("database connection failed after 10 retries: %w", err)
 }

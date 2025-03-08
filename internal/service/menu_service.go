@@ -1,20 +1,15 @@
 package service
 
 import (
-	"errors"
-	"fmt"
-	"hot-coffee/internal/dal"
+	"hot-coffee/internal/dal/utils"
 	"hot-coffee/models"
-	"slices"
 )
 
 type Menu struct {
-	cacheMenu   []models.MenuItem
-	takenIDMenu map[string]int
+	repo utils.MenuRepository
 }
 
 type MenuService interface {
-	LoadMenuCache() error
 	GetAllMenu() ([]models.MenuItem, error)
 	GetMenuByID(id string) (models.MenuItem, error)
 	DeleteMenuItem(id string) error
@@ -23,163 +18,31 @@ type MenuService interface {
 	DeductMenuProduct(ID string, quantity float64) error
 }
 
-func NewMenuService() MenuService {
-	return &Menu{
-		cacheMenu:   []models.MenuItem{},
-		takenIDMenu: make(map[string]int),
-	}
+func NewMenuService(repo utils.MenuRepository) MenuService {
+	return &Menu{repo: repo}
 }
 
-func (m *Menu) LoadMenuCache() error {
-	menu, err := dal.NewMenuRepository().ReadMenu()
-	if err != nil {
-		return errors.Join(ErrInventoryNotRead, err)
-	}
-	m.cacheMenu = menu
-	m.takenIDMenu = make(map[string]int)
-
-	for i, val := range m.cacheMenu {
-		if _, exists := m.takenIDMenu[val.ID]; exists {
-			return ErrConflict
-		}
-
-		err = validatePostMenu(val)
-		if err != nil {
-			return errors.Join(ErrConflict, err)
-		}
-		err = validatePostMenuIngredients(val.Ingredients)
-		if err != nil {
-			return errors.Join(ErrConflict, err)
-		}
-		m.takenIDMenu[val.ID] = i
-	}
-	return nil
-}
-
+// MenuService
 func (m *Menu) GetAllMenu() ([]models.MenuItem, error) {
-	err := m.LoadMenuCache()
-	if err != nil {
-		return nil, err
-	}
-	return m.cacheMenu, nil
+	return m.repo.GetMenuList()
 }
 
 func (m *Menu) GetMenuByID(id string) (models.MenuItem, error) {
-	err := m.LoadMenuCache()
-	if err != nil {
-		return models.MenuItem{}, err
-	}
-	index, exists := m.takenIDMenu[id]
-	if !exists || index < 0 || index >= len(m.cacheMenu) {
-		return models.MenuItem{}, fmt.Errorf("item with product ID=%s not found", id)
-	}
-
-	return m.cacheMenu[index], nil
+	return m.repo.GetMenuById(id)
 }
 
 func (m *Menu) DeleteMenuItem(id string) error {
-	err := m.LoadMenuCache()
-	if err != nil {
-		return err
-	}
-	index, exists := m.takenIDMenu[id]
-	if !exists || index < 0 || index >= len(m.cacheMenu) {
-		return fmt.Errorf("item with product ID=%s not found", id)
-	}
-	m.cacheMenu = append(m.cacheMenu[:index], m.cacheMenu[index+1:]...)
-
-	err = dal.NewMenuRepository().WriteMenu(m.cacheMenu)
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.repo.DeleteMenuItem(id)
 }
 
 func (m *Menu) AddNewMenuItem(item models.MenuItem) error {
-	err := m.LoadMenuCache()
-	if err != nil {
-		return err
-	}
-	if _, exists := m.takenIDMenu[item.ID]; exists {
-		return ErrConflict
-	}
-	if err = validatePostMenu(item); err != nil {
-		return err
-	}
-	err = validatePostMenuIngredients(item.Ingredients)
-	if err != nil {
-		return err
-	}
-
-	m.cacheMenu = append(m.cacheMenu, item)
-	if err := dal.NewMenuRepository().WriteMenu(m.cacheMenu); err != nil {
-		return errors.New("failed to save menu item")
-	}
-
-	return nil
+	return m.repo.CreateMenuItem(item)
 }
 
 func (m *Menu) ModifyMenuItem(item models.MenuItem) error {
-	err := m.LoadMenuCache()
-	if err != nil {
-		return err
-	}
-	index, exists := m.takenIDMenu[item.ID]
-	if !exists || index < 0 || index >= len(m.cacheMenu) {
-		return fmt.Errorf("item with product ID=%s not found", item.ID)
-	}
-	if err = validatePostMenu(item); err != nil {
-		return err
-	}
-	err = validatePostMenuIngredients(item.Ingredients)
-	if err != nil {
-		return err
-	}
-
-	if m.cacheMenu[index].Description == item.Description &&
-		m.cacheMenu[index].ID == item.ID &&
-		m.cacheMenu[index].Name == item.Name &&
-		m.cacheMenu[index].Price == item.Price &&
-		slices.Equal(m.cacheMenu[index].Ingredients, item.Ingredients) {
-		return ErrNothingToModify
-	}
-
-	m.cacheMenu[index] = item
-	if err := dal.NewMenuRepository().WriteMenu(m.cacheMenu); err != nil {
-		return errors.New("failed to modify menu item")
-	}
-
-	return nil
+	return m.repo.UpdateMenuItem(item)
 }
 
 func (m *Menu) DeductMenuProduct(ID string, quantity float64) error {
-	i := NewInventoryService()
-	err := m.LoadMenuCache()
-	if err != nil {
-		return err
-	}
-	item, err := m.GetMenuByID(ID)
-	if err != nil {
-		return err
-	}
-	index, exists := m.takenIDMenu[item.ID]
-	if !exists || index < 0 || index >= len(m.cacheMenu) {
-		return fmt.Errorf("item with product ID=s%s not found", item.ID)
-	}
-	if err = validatePostMenu(item); err != nil {
-		return err
-	}
-	err = validatePostMenuIngredients(item.Ingredients)
-	if err != nil {
-		return err
-	}
-	for _, ingredient := range item.Ingredients {
-		if err := i.DeductInventoryItem(ingredient.IngredientID, ingredient.Quantity*quantity); err != nil {
-			return err
-		}
-	}
-	if err := dal.NewMenuRepository().WriteMenu(m.cacheMenu); err != nil {
-		return errors.New("failed to modify menu item")
-	}
-	return nil
+	panic("not implemented") // TODO: Implement
 }

@@ -23,6 +23,7 @@ func ErrorResponse(w http.ResponseWriter, msg string, statusCode int) {
 		http.Error(w, "Failed to generate error response", http.StatusInternalServerError)
 		return
 	}
+	jsonResponse = append(jsonResponse, '\n')
 
 	slog.Error(msg)
 	w.Write(jsonResponse)

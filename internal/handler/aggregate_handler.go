@@ -6,16 +6,20 @@ import (
 	"net/http"
 )
 
-func AggregationEndpoints(mux *http.ServeMux) {
-	mux.HandleFunc("GET /reports/total-sales", GetTotalSalesHandler)
-	mux.HandleFunc("GET /reports/total-sales/", GetTotalSalesHandler)
-
-	mux.HandleFunc("GET /reports/popular-items", GetPopularItemsHandler)
-	mux.HandleFunc("GET /reports/popular-items/", GetPopularItemsHandler)
+type AggregationHandler struct {
+	service service.AggregationService
 }
 
-func GetTotalSalesHandler(w http.ResponseWriter, r *http.Request) {
-	totalSales, err := service.GetTotalSales()
+func AggregationEndpoints(mux *http.ServeMux, handler *AggregationHandler) {
+	mux.HandleFunc("GET /reports/total-sales", handler.GetTotalSalesHandler)
+	mux.HandleFunc("GET /reports/total-sales/", handler.GetTotalSalesHandler)
+
+	mux.HandleFunc("GET /reports/popular-items", handler.GetPopularItemsHandler)
+	mux.HandleFunc("GET /reports/popular-items/", handler.GetPopularItemsHandler)
+}
+
+func (h *AggregationHandler) GetTotalSalesHandler(w http.ResponseWriter, r *http.Request) {
+	totalSales, err := h.service.GetTotalSales()
 	if err != nil {
 		ErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -35,8 +39,8 @@ func GetTotalSalesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetPopularItemsHandler(w http.ResponseWriter, r *http.Request) {
-	popularItems, err := service.GetPopularItems()
+func (h *AggregationHandler) GetPopularItemsHandler(w http.ResponseWriter, r *http.Request) {
+	popularItems, err := h.service.GetPopularItems()
 	if err != nil {
 		ErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return

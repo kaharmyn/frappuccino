@@ -11,27 +11,33 @@ import (
 	"strconv"
 )
 
-var InventoryService = service.NewInventoryService()
-
-func InventoryEndpoints(mux *http.ServeMux) {
-	mux.HandleFunc("POST /inventory", PostInventoryHandler)
-	mux.HandleFunc("POST /inventory/", PostInventoryHandler)
-
-	mux.HandleFunc("GET /inventory", GetAllInventoryHandler)
-	mux.HandleFunc("GET /inventory/", GetAllInventoryHandler)
-
-	mux.HandleFunc("GET /inventory/{id}", GetInventoryByIDHandler)
-	mux.HandleFunc("GET /inventory/{id}/", GetInventoryByIDHandler)
-
-	mux.HandleFunc("PUT /inventory/{id}", PutInventoryHandler)
-	mux.HandleFunc("PUT /inventory/{id}/", PutInventoryHandler)
-
-	mux.HandleFunc("DELETE /inventory/{id}", DeleteInventoryByIDHandler)
-	mux.HandleFunc("DELETE /inventory/{id}/", DeleteInventoryByIDHandler)
+type InventoryHandler struct {
+	service service.InventoryService
 }
 
-func GetAllInventoryHandler(w http.ResponseWriter, r *http.Request) {
-	inventory, err := InventoryService.GetAllInventory()
+func NewInventoryHandler(service service.InventoryService) *InventoryHandler {
+	return &InventoryHandler{service: service}
+}
+
+func InventoryEndpoints(mux *http.ServeMux, handler *InventoryHandler) {
+	mux.HandleFunc("POST /inventory", handler.PostInventoryHandler)
+	mux.HandleFunc("POST /inventory/", handler.PostInventoryHandler)
+
+	mux.HandleFunc("GET /inventory", handler.GetAllInventoryHandler)
+	mux.HandleFunc("GET /inventory/", handler.GetAllInventoryHandler)
+
+	mux.HandleFunc("GET /inventory/{id}", handler.GetInventoryByIDHandler)
+	mux.HandleFunc("GET /inventory/{id}/", handler.GetInventoryByIDHandler)
+
+	mux.HandleFunc("PUT /inventory/{id}", handler.PutInventoryHandler)
+	mux.HandleFunc("PUT /inventory/{id}/", handler.PutInventoryHandler)
+
+	mux.HandleFunc("DELETE /inventory/{id}", handler.DeleteInventoryByIDHandler)
+	mux.HandleFunc("DELETE /inventory/{id}/", handler.DeleteInventoryByIDHandler)
+}
+
+func (h *InventoryHandler) GetAllInventoryHandler(w http.ResponseWriter, r *http.Request) {
+	inventory, err := h.service.GetAllInventory()
 	if err != nil {
 		ErrorResponse(w, "Could not retrieve inventory data", http.StatusInternalServerError)
 		return
@@ -53,9 +59,9 @@ func GetAllInventoryHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Retrieved all inventory items")
 }
 
-func GetInventoryByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *InventoryHandler) GetInventoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 	itemId := r.PathValue("id")
-	item, err := InventoryService.GetInventoryByID(itemId)
+	item, err := h.service.GetInventoryByID(itemId)
 	if errors.Is(err, service.ErrInventoryNotRead) {
 		ErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -81,9 +87,9 @@ func GetInventoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Retrieved inventory item", "ID", itemId)
 }
 
-func DeleteInventoryByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *InventoryHandler) DeleteInventoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 	itemId := r.PathValue("id")
-	err := InventoryService.DeleteInventoryItem(itemId)
+	err := h.service.DeleteInventoryItem(itemId)
 	if errors.Is(err, service.ErrInventoryNotRead) {
 		ErrorResponse(w, err.Error(), http.StatusNotFound)
 		return
@@ -94,6 +100,67 @@ func DeleteInventoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 	slog.Info("Deleted inventory item id", "ID", itemId)
+}
+
+func (h *InventoryHandler) PostInventoryHandler(w http.ResponseWriter, r *http.Request) {
+	item, err := parseInventoryItem(r)
+	if errors.Is(err, ErrUnsupportedContentType) {
+		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
+	} else if err != nil {
+		ErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = h.service.AddNewInventoryItem(item); errors.Is(err, service.ErrConflict) {
+		ErrorResponse(w, err.Error(), http.StatusConflict)
+		return
+	} else if err != nil {
+		ErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	if _, err = w.Write([]byte("Inventory item added successfully")); err != nil {
+		ErrorResponse(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+
+	slog.Info("Added item", "ID", item.IngredientID)
+}
+
+func (h *InventoryHandler) PutInventoryHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	item, err := parseInventoryItem(r)
+	if errors.Is(err, ErrUnsupportedContentType) {
+		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
+	} else if err != nil {
+		ErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if id != item.IngredientID {
+		fmt.Println(id, "with", item.IngredientID)
+		ErrorResponse(w, "IngredientID does not match id", http.StatusBadRequest)
+		return
+	}
+
+	if err = h.service.ModifyInventoryItem(item); errors.Is(err, service.ErrConflict) {
+		ErrorResponse(w, err.Error(), http.StatusConflict)
+		return
+	} else if errors.Is(err, service.ErrNothingToModify) {
+		ErrorResponse(w, err.Error(), http.StatusNoContent)
+		return
+	} else if err != nil {
+		ErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if _, err = w.Write([]byte("Inventory item modified successfully")); err != nil {
+		ErrorResponse(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+	slog.Info("Modified the inventory item: ", "ID", id)
 }
 
 func parseInventoryItem(r *http.Request) (models.InventoryItem, error) {
@@ -125,64 +192,4 @@ func parseInventoryItem(r *http.Request) (models.InventoryItem, error) {
 	}
 
 	return item, nil
-}
-
-func PostInventoryHandler(w http.ResponseWriter, r *http.Request) {
-	item, err := parseInventoryItem(r)
-	if errors.Is(err, ErrUnsupportedContentType) {
-		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
-	} else if err != nil {
-		ErrorResponse(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err = InventoryService.AddNewInventoryItem(item); errors.Is(err, service.ErrConflict) {
-		ErrorResponse(w, err.Error(), http.StatusConflict)
-		return
-	} else if err != nil {
-		ErrorResponse(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	if _, err = w.Write([]byte("Inventory item added successfully")); err != nil {
-		ErrorResponse(w, "Failed to write response", http.StatusInternalServerError)
-		return
-	}
-
-	slog.Info("Added item", "ID", item.IngredientID)
-}
-
-func PutInventoryHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	item, err := parseInventoryItem(r)
-	if errors.Is(err, ErrUnsupportedContentType) {
-		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
-	} else if err != nil {
-		ErrorResponse(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if id != item.IngredientID {
-		ErrorResponse(w, "IngredientID does not match id", http.StatusBadRequest)
-		return
-	}
-
-	if err = InventoryService.ModifyInventoryItem(item); errors.Is(err, service.ErrConflict) {
-		ErrorResponse(w, err.Error(), http.StatusConflict)
-		return
-	} else if errors.Is(err, service.ErrNothingToModify) {
-		ErrorResponse(w, err.Error(), http.StatusNoContent)
-		return
-	} else if err != nil {
-		ErrorResponse(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if _, err = w.Write([]byte("Inventory item modified successfully")); err != nil {
-		ErrorResponse(w, "Failed to write response", http.StatusInternalServerError)
-		return
-	}
-	slog.Info("Modified the inventory item: ", "ID", id)
 }

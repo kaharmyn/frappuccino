@@ -11,30 +11,36 @@ import (
 	"strconv"
 )
 
-var OrderService = service.NewOrderService()
-
-func OrderEndpoints(mux *http.ServeMux) {
-	mux.HandleFunc("POST /orders", PostOrderHandler)
-	mux.HandleFunc("POST /orders/", PostOrderHandler)
-
-	mux.HandleFunc("GET /orders", GetAllOrdersHandler)
-	mux.HandleFunc("GET /orders/", GetAllOrdersHandler)
-
-	mux.HandleFunc("GET /orders/{id}", GetOrderByIDHandler)
-	mux.HandleFunc("GET /orders/{id}/", GetOrderByIDHandler)
-
-	mux.HandleFunc("PUT /orders/{id}", PutOrderHandler)
-	mux.HandleFunc("PUT /orders/{id}/", PutOrderHandler)
-
-	mux.HandleFunc("DELETE /orders/{id}", DeleteOrderByIDHandler)
-	mux.HandleFunc("DELETE /orders/{id}/", DeleteOrderByIDHandler)
-
-	mux.HandleFunc("POST /orders/{id}/close", PostOrderCloserHandler)
-	mux.HandleFunc("POST /orders/{id}/close/", PostOrderCloserHandler)
+type OrderHandler struct {
+	service service.OrderService
 }
 
-func GetAllOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	orders, err := OrderService.GetAllOrders()
+func NewOrderHandler(service service.OrderService) *OrderHandler {
+	return &OrderHandler{service: service}
+}
+
+func OrderEndpoints(mux *http.ServeMux, handler *OrderHandler) {
+	mux.HandleFunc("POST /orders", handler.PostOrderHandler)
+	mux.HandleFunc("POST /orders/", handler.PostOrderHandler)
+
+	mux.HandleFunc("GET /orders", handler.GetAllOrdersHandler)
+	mux.HandleFunc("GET /orders/", handler.GetAllOrdersHandler)
+
+	mux.HandleFunc("GET /orders/{id}", handler.GetOrderByIDHandler)
+	mux.HandleFunc("GET /orders/{id}/", handler.GetOrderByIDHandler)
+
+	mux.HandleFunc("PUT /orders/{id}", handler.PutOrderHandler)
+	mux.HandleFunc("PUT /orders/{id}/", handler.PutOrderHandler)
+
+	mux.HandleFunc("DELETE /orders/{id}", handler.DeleteOrderByIDHandler)
+	mux.HandleFunc("DELETE /orders/{id}/", handler.DeleteOrderByIDHandler)
+
+	mux.HandleFunc("POST /orders/{id}/close", handler.PostOrderCloserHandler)
+	mux.HandleFunc("POST /orders/{id}/close/", handler.PostOrderCloserHandler)
+}
+
+func (h *OrderHandler) GetAllOrdersHandler(w http.ResponseWriter, r *http.Request) {
+	orders, err := h.service.GetAllOrders()
 	if err != nil {
 		ErrorResponse(w, "Could not retrieve orders data", http.StatusInternalServerError)
 		return
@@ -56,7 +62,7 @@ func GetAllOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Retrieved all orders")
 }
 
-func GetOrderByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) GetOrderByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("id")
 	ID, err := strconv.Atoi(idString)
 	if err != nil {
@@ -64,7 +70,7 @@ func GetOrderByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := OrderService.GetOrderByID(ID)
+	order, err := h.service.GetOrderByID(ID)
 	if errors.Is(err, service.ErrOrderNotRead) {
 		ErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -90,7 +96,7 @@ func GetOrderByIDHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Retrieved order", "ID", order.ID)
 }
 
-func PostOrderHandler(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) PostOrderHandler(w http.ResponseWriter, r *http.Request) {
 	order, err := parseOrder(r)
 	if errors.Is(err, ErrUnsupportedContentType) {
 		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
@@ -99,7 +105,7 @@ func PostOrderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = OrderService.AddNewOrder(order); errors.Is(err, service.ErrConflict) {
+	if err = h.service.AddNewOrder(order); errors.Is(err, service.ErrConflict) {
 		ErrorResponse(w, err.Error(), http.StatusConflict)
 		return
 	} else if err != nil {
@@ -116,7 +122,7 @@ func PostOrderHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Added new order", "ID", order.ID)
 }
 
-func PostOrderCloserHandler(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) PostOrderCloserHandler(w http.ResponseWriter, r *http.Request) {
 	ordersStruct := service.Order{}
 	idString := r.PathValue("id")
 	ID, err := strconv.Atoi(idString)
@@ -140,7 +146,7 @@ func PostOrderCloserHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Closed order", "ID", idString)
 }
 
-func PutOrderHandler(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) PutOrderHandler(w http.ResponseWriter, r *http.Request) {
 	order, err := parseOrder(r)
 	if errors.Is(err, ErrUnsupportedContentType) {
 		ErrorResponse(w, err.Error(), http.StatusUnsupportedMediaType)
@@ -151,13 +157,17 @@ func PutOrderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idString := r.PathValue("id")
-	ID, err := strconv.Atoi(idString)
+	idInPath, err := strconv.Atoi(idString)
 	if err != nil {
 		ErrorResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err = OrderService.ModifyOrder(order, ID); errors.Is(err, service.ErrConflict) {
+	if idInPath != order.ID {
+		ErrorResponse(w, "ID does not match with JSON payload", http.StatusBadRequest)
+	}
+
+	if err = h.service.ModifyOrder(order); errors.Is(err, service.ErrConflict) {
 		ErrorResponse(w, err.Error(), http.StatusConflict)
 		return
 	} else if err != nil {
@@ -175,7 +185,7 @@ func PutOrderHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Updated order", "ID", order.ID)
 }
 
-func DeleteOrderByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) DeleteOrderByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idString := r.PathValue("id")
 	ID, err := strconv.Atoi(idString)
 	if err != nil {
@@ -183,7 +193,7 @@ func DeleteOrderByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = OrderService.DeleteOrder(ID)
+	err = h.service.DeleteOrder(ID)
 	if errors.Is(err, service.ErrOrderNotRead) {
 		ErrorResponse(w, err.Error(), http.StatusNotFound)
 		return
