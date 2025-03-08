@@ -37,25 +37,26 @@ func MenuEndpoints(mux *http.ServeMux, handler *MenuHandler) {
 }
 
 func (h *MenuHandler) GetAllMenuHandler(w http.ResponseWriter, r *http.Request) {
-	menu, err := h.service.GetAllMenu()
-	if err != nil {
-		ErrorResponse(w, "Could not retrieve menu data:"+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// menu, err := h.service.GetAllMenu()
+	// if err != nil {
+	// 	ErrorResponse(w, "Could not retrieve menu data:"+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	// w.Header().Set("Content-Type", "application/json")
+	// w.WriteHeader(http.StatusOK)
 
-	jsonData, err := json.MarshalIndent(menu, "", "    ")
-	if err != nil {
-		ErrorResponse(w, "Failed to encode menu items", http.StatusInternalServerError)
-		return
-	}
+	// jsonData, err := json.MarshalIndent(menu, "", "    ")
+	// if err != nil {
+	// 	ErrorResponse(w, "Failed to encode menu items", http.StatusInternalServerError)
+	// 	return
+	// }
+	w.Write([]byte{'3', 'q', '\n'})
 
-	if _, err = w.Write(jsonData); err != nil {
-		ErrorResponse(w, "Failed to write response", http.StatusInternalServerError)
-		return
-	}
+	// if _, err = w.Write(jsonData); err != nil {
+	// 	ErrorResponse(w, "Failed to write response", http.StatusInternalServerError)
+	// 	return
+	// }
 
 	slog.Info("Retrieved all menu products")
 }

@@ -1,0 +1,17 @@
+# Air configuration file
+root = "."  # The root of your project
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o main cmd/main.go"  # Ensure correct path
+bin = "main"
+dir = "."
+include_ext = ["go"]
+exclude_dir = ["vendor", "data", "db"]
+run_after_build = "chmod +x main"
+
+[log]
+level = "debug"
+
+[screen]
+clear = true  # Clears the screen before restarting

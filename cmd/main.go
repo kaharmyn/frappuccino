@@ -27,6 +27,8 @@ func main() {
 	menuService := service.NewMenuService(menuRepo)
 	menuHandler := handler.NewMenuHandler(menuService)
 
+	fmt.Println("xdd10")
+
 	orderRepo := dal.NewOrderRepository(db)
 	orderService := service.NewOrderService(orderRepo)
 	orderHandler := handler.NewOrderHandler(orderService)
